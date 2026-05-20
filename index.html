@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Visual Pomodoro Timer</title>
+    
+    <!-- PWA Installer Data -->
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Pomodoro Timer">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%233b82f6'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7V7z'/%3E%3C/svg%3E">
+    <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Pomodoro%20Timer%22%2C%22short_name%22%3A%22Pomodoro%20Timer%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230f172a%22%2C%22theme_color%22%3A%22%230f172a%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27%25233b82f6%27%253E%253Cpath%20d%3D%27M12%202C6.48%202%202%206.48%202%2012s4.48%2010%2010%2010%2010-4.48%2010-10S17.52%202%2012%202zm0%2018c-4.41%200-8-3.59-8-8s3.59-8 8-8%208%203.59%208%208-3.59%208-8%208zm.5-13H11v6l5.2%203.2.8-1.3-4.5-2.7V7z%27%2F%253E%253C%2Fsvg%253E%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%2C%22purpose%22%3A%22any%20maskable%22%7D%5D%7D">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.5s ease;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Circular Progress Styles */
+        .progress-ring__circle {
+            transition: stroke-dashoffset 1s linear, stroke 0.5s ease;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        /* Mode Theme Transitions */
+        .theme-work {
+            background-color: #0f172a; /* Slate 900 */
+        }
+        .theme-work .accent-text { color: #3b82f6; /* Blue 500 */ }
+        .theme-work .accent-stroke { stroke: #3b82f6; }
+        .theme-work .accent-bg { background-color: #3b82f6; }
+        .theme-work .accent-bg:hover { background-color: #2563eb; /* Blue 600 */ }
+
+        .theme-break {
+            background-color: #064e3b; /* Emerald 900 */
+        }
+        .theme-break .accent-text { color: #10b981; /* Emerald 500 */ }
+        .theme-break .accent-stroke { stroke: #10b981; }
+        .theme-break .accent-bg { background-color: #10b981; }
+        .theme-break .accent-bg:hover { background-color: #059669; }
+
+        /* Custom Input styling */
+        input[type="number"]::-webkit-inner-spin-button, 
+        input[type="number"]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+    </style>
+</head>
+<body class="theme-work min-h-screen text-slate-100 flex items-center justify-center p-4">
+
+    <!-- PWA Install Prompt Banner -->
+    <div id="install-banner" class="hidden fixed top-4 left-4 right-4 max-w-md mx-auto bg-slate-800 border border-slate-600 text-white p-4 rounded-xl shadow-2xl flex justify-between items-center z-50 transition-all">
+        <div class="flex items-center gap-3">
+            <svg width="24" height="24" fill="#3b82f6" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7V7z"/></svg>
+            <div class="text-sm">
+                <p class="font-bold">Install Pomodoro Timer</p>
+                <p class="text-slate-300 text-xs">Add to your device for a native experience.</p>
+            </div>
+        </div>
+        <div class="flex gap-2 items-center">
+            <button id="btn-install" class="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-bold shadow hover:bg-blue-500">Install</button>
+            <button id="btn-dismiss-install" class="p-1.5 text-slate-400 hover:text-white rounded"><svg width="20" height="20" fill="currentColor" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg></button>
+        </div>
+    </div>
+
+    <div class="bg-slate-800/50 backdrop-blur-md p-8 sm:p-12 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-md flex flex-col items-center">
+        
+        <!-- Header -->
+        <h1 class="text-2xl font-bold tracking-widest uppercase mb-2 text-slate-300">Pomodoro</h1>
+        <div id="mode-text" class="text-lg font-semibold tracking-wide accent-text mb-8 transition-colors duration-500">
+            Focus Session
+        </div>
+
+        <!-- Timer Circle -->
+        <div class="relative w-64 h-64 mb-10 flex items-center justify-center">
+            <svg class="absolute inset-0 w-full h-full drop-shadow-lg" viewBox="0 0 120 120">
+                <!-- Background Circle -->
+                <circle cx="60" cy="60" r="54" fill="none" stroke="#334155" stroke-width="6" />
+                <!-- Progress Circle -->
+                <circle id="progress-circle" class="progress-ring__circle accent-stroke" 
+                        cx="60" cy="60" r="54" fill="none" stroke-width="6" stroke-linecap="round" />
+            </svg>
+            <div id="time-display" class="relative z-10 text-5xl font-mono text-white tracking-tight drop-shadow-md">
+                25:00
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex gap-4 mb-10 w-full justify-center">
+            <button id="btn-play" class="accent-bg text-white px-6 py-3 rounded-xl font-semibold shadow-lg transition-all active:scale-95 flex items-center gap-2">
+                <svg width="20" height="20" fill="currentColor" viewBox="0 0 256 256"><path d="M240,128a15.74,15.74,0,0,1-7.6,13.51L88.32,229.65a16,16,0,0,1-24.2-13.64V39.94a16,16,0,0,1,24.2-13.64l144.08,88.14A15.74,15.74,0,0,1,240,128Z"></path></svg>
+                Start
+            </button>
+            <button id="btn-pause" class="hidden bg-slate-600 hover:bg-slate-500 text-white px-6 py-3 rounded-xl font-semibold shadow-lg transition-all active:scale-95 flex items-center gap-2">
+                <svg width="20" height="20" fill="currentColor" viewBox="0 0 256 256"><path d="M216,48V208a16,16,0,0,1-16,16H160a16,16,0,0,1-16-16V48a16,16,0,0,1,16-16h40A16,16,0,0,1,216,48ZM96,32H56A16,16,0,0,0,40,48V208a16,16,0,0,0,16,16H96a16,16,0,0,0,16-16V48A16,16,0,0,0,96,32Z"></path></svg>
+                Pause
+            </button>
+            <button id="btn-reset" class="bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white px-4 py-3 rounded-xl font-semibold shadow-lg transition-all active:scale-95">
+                <svg width="20" height="20" fill="currentColor" viewBox="0 0 256 256"><path d="M197.65,197.65a96,96,0,1,1,0-135.3l13.66-13.66a8,8,0,0,1,13.66,5.66v48a8,8,0,0,1-8,8h-48a8,8,0,0,1-5.66-13.66l14.33-14.33a80,80,0,1,0,0,113.14,8,8,0,0,1,11.32,11.32Z"></path></svg>
+            </button>
+        </div>
+
+        <!-- Settings -->
+        <div class="w-full bg-slate-900/50 rounded-2xl p-5 border border-slate-700/50">
+            <h2 class="text-sm font-semibold text-slate-400 mb-4 uppercase tracking-wider text-center">Settings</h2>
+            <div class="flex justify-around gap-4">
+                <div class="flex flex-col items-center">
+                    <label class="text-xs text-slate-400 mb-2 font-medium">Work (Min)</label>
+                    <div class="flex items-center bg-slate-800 rounded-lg overflow-hidden border border-slate-700">
+                        <button onclick="adjustTime('work', -1)" class="px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors">-</button>
+                        <input type="number" id="input-work" value="25" min="1" max="120" class="w-12 bg-transparent text-center text-slate-100 font-semibold focus:outline-none">
+                        <button onclick="adjustTime('work', 1)" class="px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors">+</button>
+                    </div>
+                </div>
+                <div class="flex flex-col items-center">
+                    <label class="text-xs text-slate-400 mb-2 font-medium">Break (Min)</label>
+                    <div class="flex items-center bg-slate-800 rounded-lg overflow-hidden border border-slate-700">
+                        <button onclick="adjustTime('break', -1)" class="px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors">-</button>
+                        <input type="number" id="input-break" value="5" min="1" max="60" class="w-12 bg-transparent text-center text-slate-100 font-semibold focus:outline-none">
+                        <button onclick="adjustTime('break', 1)" class="px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors">+</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Task Planner -->
+        <div class="w-full bg-slate-900/50 rounded-2xl p-5 border border-slate-700/50 mt-4">
+            <h2 class="text-sm font-semibold text-slate-400 mb-4 uppercase tracking-wider text-center">AI Task Breakdown</h2>
+            <div class="flex flex-col gap-3">
+                <input type="text" id="main-task-input" placeholder="What are you working on?" class="w-full bg-slate-800 text-slate-100 text-sm rounded-lg px-4 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors">
+                <button id="btn-breakdown" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold py-2 rounded-lg transition-colors shadow-lg flex items-center justify-center gap-2">
+                    ✨ Plan My Sessions
+                </button>
+                <div id="api-error" class="text-red-400 text-xs hidden text-center"></div>
+                <ul id="task-list" class="flex flex-col gap-2 mt-2 empty:hidden">
+                    <!-- Tasks will be injected here -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- State ---
+        let timerId = null;
+        let isRunning = false;
+        let isWorkMode = true;
+        let timeLeft = 25 * 60; // in seconds
+        let totalTime = 25 * 60; // in seconds, used for progress bar
+
+        // --- DOM Elements ---
+        const display = document.getElementById('time-display');
+        const modeText = document.getElementById('mode-text');
+        const progressCircle = document.getElementById('progress-circle');
+        const btnPlay = document.getElementById('btn-play');
+        const btnPause = document.getElementById('btn-pause');
+        const btnReset = document.getElementById('btn-reset');
+        const inputWork = document.getElementById('input-work');
+        const inputBreak = document.getElementById('input-break');
+
+        // --- SVG Progress Circle Setup ---
+        const radius = progressCircle.r.baseVal.value;
+        const circumference = radius * 2 * Math.PI;
+        progressCircle.style.strokeDasharray = `${circumference} ${circumference}`;
+        progressCircle.style.strokeDashoffset = 0;
+
+        // --- Audio: Web Audio API synthesis for a pleasant double-chime ---
+        function playChime() {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            function playNote(freq, startTime, duration) {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, ctx.currentTime + startTime);
+                
+                // Envelope
+                gain.gain.setValueAtTime(0, ctx.currentTime + startTime);
+                gain.gain.linearRampToValueAtTime(0.6, ctx.currentTime + startTime + 0.05); // Attack
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + startTime + duration); // Decay/Release
+                
+                osc.start(ctx.currentTime + startTime);
+                osc.stop(ctx.currentTime + startTime + duration);
+            }
+
+            playNote(880, 0, 0.4);      // A5
+            playNote(1108.73, 0.2, 0.8); // C#6
+        }
+
+        // --- Core Logic ---
+        function updateDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            display.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // Update Progress Circle visually
+            const progress = timeLeft / totalTime;
+            const offset = circumference - (progress * circumference);
+            progressCircle.style.strokeDashoffset = offset;
+
+            // Page Title
+            document.title = `${display.textContent} - ${isWorkMode ? 'Focus' : 'Break'}`;
+        }
+
+        function switchMode() {
+            playChime();
+            isWorkMode = !isWorkMode;
+            
+            if (isWorkMode) {
+                document.body.className = "theme-work min-h-screen text-slate-100 flex items-center justify-center p-4";
+                modeText.textContent = "Focus Session";
+                timeLeft = parseInt(inputWork.value) * 60;
+            } else {
+                document.body.className = "theme-break min-h-screen text-slate-100 flex items-center justify-center p-4";
+                modeText.textContent = "Break Time";
+                timeLeft = parseInt(inputBreak.value) * 60;
+            }
+            
+            totalTime = timeLeft;
+            updateDisplay();
+        }
+
+        function timerTick() {
+            if (timeLeft > 0) {
+                timeLeft--;
+                updateDisplay();
+            } else {
+                switchMode();
+                // Automatically continue to next phase
+            }
+        }
+
+        function togglePlayPause() {
+            if (isRunning) {
+                // Pause
+                clearInterval(timerId);
+                btnPlay.classList.remove('hidden');
+                btnPause.classList.add('hidden');
+            } else {
+                // Play
+                if (timeLeft <= 0) {
+                    timeLeft = (isWorkMode ? parseInt(inputWork.value) : parseInt(inputBreak.value)) * 60;
+                    totalTime = timeLeft;
+                }
+                timerId = setInterval(timerTick, 1000);
+                btnPlay.classList.add('hidden');
+                btnPause.classList.remove('hidden');
+                
+                // Unsuspend audio context on first user interaction if needed by browser
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                if(ctx.state === 'suspended') ctx.resume();
+            }
+            isRunning = !isRunning;
+        }
+
+        function resetTimer() {
+            clearInterval(timerId);
+            isRunning = false;
+            
+            btnPlay.classList.remove('hidden');
+            btnPause.classList.add('hidden');
+            
+            isWorkMode = true;
+            document.body.className = "theme-work min-h-screen text-slate-100 flex items-center justify-center p-4";
+            modeText.textContent = "Focus Session";
+            
+            timeLeft = parseInt(inputWork.value) * 60;
+            totalTime = timeLeft;
+            
+            // Remove transition temporarily to snap the ring back
+            progressCircle.style.transition = 'none';
+            updateDisplay();
+            // Restore transition
+            setTimeout(() => {
+                progressCircle.style.transition = 'stroke-dashoffset 1s linear, stroke 0.5s ease';
+            }, 50);
+        }
+
+        // --- Settings Handlers ---
+        window.adjustTime = function(type, amount) {
+            const input = type === 'work' ? inputWork : inputBreak;
+            let val = parseInt(input.value) + amount;
+            
+            // Enforce min/max
+            if (val < 1) val = 1;
+            if (type === 'work' && val > 120) val = 120;
+            if (type === 'break' && val > 60) val = 60;
+            
+            input.value = val;
+            handleInputChange();
+        };
+
+        function handleInputChange() {
+            // Only strictly enforce input validation when user types directly
+            let wVal = parseInt(inputWork.value);
+            let bVal = parseInt(inputBreak.value);
+            
+            if (isNaN(wVal) || wVal < 1) inputWork.value = 1;
+            if (isNaN(bVal) || bVal < 1) inputBreak.value = 1;
+
+            // If timer is not running, update the current time directly
+            if (!isRunning) {
+                if (isWorkMode) {
+                    timeLeft = parseInt(inputWork.value) * 60;
+                } else {
+                    timeLeft = parseInt(inputBreak.value) * 60;
+                }
+                totalTime = timeLeft;
+                
+                // Snap ring back without animation
+                progressCircle.style.transition = 'none';
+                updateDisplay();
+                setTimeout(() => {
+                    progressCircle.style.transition = 'stroke-dashoffset 1s linear, stroke 0.5s ease';
+                }, 50);
+            }
+        }
+
+        // Event Listeners
+        btnPlay.addEventListener('click', togglePlayPause);
+        btnPause.addEventListener('click', togglePlayPause);
+        btnReset.addEventListener('click', resetTimer);
+        inputWork.addEventListener('change', handleInputChange);
+        inputBreak.addEventListener('change', handleInputChange);
+
+        // --- PWA Installation Logic ---
+        let deferredPrompt;
+        const installBanner = document.getElementById('install-banner');
+        const btnInstall = document.getElementById('btn-install');
+        const btnDismissInstall = document.getElementById('btn-dismiss-install');
+
+        // Detect if device is iOS to show manual install instructions (since iOS doesn't support beforeinstallprompt)
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+
+        if (isIOS && !isStandalone) {
+            installBanner.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <div class="text-sm">
+                        <p class="font-bold">Install on iOS</p>
+                        <p class="text-slate-300 text-xs mt-1">Tap <svg class="inline w-4 h-4 mb-1" fill="currentColor" viewBox="0 0 256 256"><path d="M224,136v72a16,16,0,0,1-16,16H48a16,16,0,0,1-16-16V136a16,16,0,0,1,16-16H88a8,8,0,0,1,0,16H48v72H208V136H168a8,8,0,0,1,0-16h40A16,16,0,0,1,224,136ZM133.66,26.34a8,8,0,0,0-11.32,0l-40,40a8,8,0,0,0,11.32,11.32L120,51.31V152a8,8,0,0,0,16,0V51.31l26.34,26.35a8,8,0,0,0,11.32-11.32Z"></path></svg> Share below, then select <strong>'Add to Home Screen'</strong>.</p>
+                    </div>
+                </div>
+                <button id="btn-dismiss-ios" class="p-1.5 text-slate-400 hover:text-white rounded self-start"><svg width="20" height="20" fill="currentColor" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg></button>
+            `;
+            installBanner.classList.remove('hidden');
+            document.getElementById('btn-dismiss-ios').addEventListener('click', () => {
+                installBanner.classList.add('hidden');
+            });
+        }
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault(); // Prevent standard browser infobar
+            deferredPrompt = e;
+            if(!isStandalone) {
+                installBanner.classList.remove('hidden'); // Show our custom install banner
+            }
+        });
+
+        if(btnInstall) {
+            btnInstall.addEventListener('click', async () => {
+                installBanner.classList.add('hidden');
+                if (deferredPrompt) {
+                    deferredPrompt.prompt(); // Show native browser install prompt
+                    const { outcome } = await deferredPrompt.userChoice;
+                    console.log(`User accepted install: ${outcome}`);
+                    deferredPrompt = null;
+                }
+            });
+        }
+
+        if(btnDismissInstall) {
+            btnDismissInstall.addEventListener('click', () => {
+                installBanner.classList.add('hidden');
+            });
+        }
+
+        // --- Gemini AI Task Planner ---
+        const apiKey = "";
+        const btnBreakdown = document.getElementById('btn-breakdown');
+        const mainTaskInput = document.getElementById('main-task-input');
+        const taskList = document.getElementById('task-list');
+        const apiError = document.getElementById('api-error');
+
+        async function fetchWithRetry(url, options, retries = 5) {
+            const delays = [1000, 2000, 4000, 8000, 16000];
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return await response.json();
+                } catch (error) {
+                    if (i === retries - 1) throw error;
+                    await new Promise(res => setTimeout(res, delays[i]));
+                }
+            }
+        }
+
+        btnBreakdown.addEventListener('click', async () => {
+            const taskGoal = mainTaskInput.value.trim();
+            if (!taskGoal) return;
+
+            // UI Loading state
+            btnBreakdown.disabled = true;
+            btnBreakdown.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> ✨ Breaking it down...`;
+            apiError.classList.add('hidden');
+            taskList.innerHTML = '';
+
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            
+            const payload = {
+                contents: [{ parts: [{ text: `My main task is: ${taskGoal}` }] }],
+                systemInstruction: { 
+                    parts: [{ text: "You are a productivity expert helping a user with the Pomodoro technique. Break their main task down into 3 to 5 small, actionable sub-tasks that can each be completed in a single 25-minute focus session. Keep each step concise (under 10 words). Return ONLY a JSON array of strings representing these steps." }] 
+                },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "ARRAY",
+                        items: { type: "STRING" }
+                    }
+                }
+            };
+
+            try {
+                const result = await fetchWithRetry(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const textResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!textResponse) throw new Error("Invalid response format");
+                
+                const tasks = JSON.parse(textResponse);
+                
+                tasks.forEach(task => {
+                    const li = document.createElement('li');
+                    li.className = "bg-slate-800 text-slate-300 text-sm px-3 py-2 rounded border border-slate-700 cursor-pointer hover:bg-slate-700 hover:text-white transition-colors flex items-center gap-2 text-left";
+                    li.innerHTML = `<svg class="flex-shrink-0 text-indigo-400" width="16" height="16" fill="currentColor" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm45.66,85.66-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32Z"></path></svg> <span>${task}</span>`;
+                    
+                    // Allow clicking a task to make it the active focus session title
+                    li.addEventListener('click', () => {
+                        if(isWorkMode) {
+                            modeText.textContent = task;
+                        } else {
+                            // Automatically switch to work mode for the new task
+                            isWorkMode = true;
+                            document.body.className = "theme-work min-h-screen text-slate-100 flex items-center justify-center p-4";
+                            modeText.textContent = task;
+                            timeLeft = parseInt(inputWork.value) * 60;
+                            totalTime = timeLeft;
+                            updateDisplay();
+                        }
+                    });
+                    
+                    taskList.appendChild(li);
+                });
+
+            } catch (error) {
+                console.error("AI Generation Error:", error);
+                apiError.textContent = "Failed to generate tasks. Please try again later.";
+                apiError.classList.remove('hidden');
+            } finally {
+                btnBreakdown.disabled = false;
+                btnBreakdown.innerHTML = `✨ Plan My Sessions`;
+            }
+        });
+
+        // Initial setup
+        updateDisplay();
+    </script>
+</body>
+</html>
